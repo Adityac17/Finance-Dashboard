@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monthly Budget Ledger</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="sheet">
+
+  <header>
+    <div>
+      <p class="book-label">PERSONAL &amp; HOUSEHOLD FINANCES · INR (₹)</p>
+      <h1>Monthly Budget Ledger</h1>
+      <p class="subtitle">A running account of income, spending and savings, entered month by month.</p>
+    </div>
+    <nav class="crumbs"><a href="ledger.html">Transaction ledger &amp; categories →</a></nav>
+  </header>
+
+  <nav class="tabs" id="tabs"></nav>
+  <section class="kpi-row" id="kpiRow"></section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2 class="section-title">Income against expenses</h2>
+      <p class="section-note">Recorded months, side by side</p>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box">
+        <svg id="barChart" viewBox="0 0 460 260" width="100%"></svg>
+        <div class="legend">
+          <span><span class="swatch" style="background:var(--credit)"></span>Income</span>
+          <span><span class="swatch" style="background:var(--debit)"></span>Expenses</span>
+        </div>
+      </div>
+      <div class="chart-box">
+        <svg id="donutChart" viewBox="0 0 300 260" width="100%"></svg>
+        <div class="legend" id="donutLegend"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2 class="section-title">Cash flow over time</h2>
+      <p class="section-note">Every month currently in the ledger</p>
+    </div>
+    <svg id="lineChart" viewBox="0 0 900 260" width="100%"></svg>
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--credit)"></span>Income</span>
+      <span><span class="swatch" style="background:var(--debit)"></span>Expenses</span>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2 class="section-title">Budget vs. actual</h2>
+      <p class="section-note" id="budgetNote"></p>
+    </div>
+    <table class="budget-table">
+      <thead><tr><th>Category</th><th class="num">Planned (₹)</th><th class="num">Actual (₹)</th><th class="num">Variance (₹)</th><th>Budget used</th></tr></thead>
+      <tbody id="budgetBody"></tbody>
+    </table>
+    <p class="section-note" style="margin-top:12px;">To add, rename or re-budget a category, use <a href="ledger.html">the ledger page</a>.</p>
+  </section>
+
+  <footer>Personal ledger · data stored in this browser only</footer>
+</div>
+
+<script src="js/store.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

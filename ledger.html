@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transaction Ledger &amp; Categories</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+<div class="sheet">
+
+  <header>
+    <div>
+      <p class="book-label">PERSONAL &amp; HOUSEHOLD FINANCES · INR (₹)</p>
+      <h1>Transaction Ledger</h1>
+      <p class="subtitle">Every entry, editable in place — plus category management and imports.</p>
+    </div>
+    <nav class="crumbs"><a href="index.html">← Back to dashboard</a></nav>
+  </header>
+
+  <div class="data-panel">
+    <div class="group">
+      <label class="filebtn" for="importFile">＋ Import statement (.csv / .pdf)</label>
+      <input type="file" id="importFile" accept=".csv,.pdf">
+    </div>
+    <div class="group" style="flex:1;">
+      <input type="url" id="sheetUrl" placeholder="Optional: paste a Google Sheets &quot;Publish to web&quot; CSV link">
+      <button class="go" id="fetchSheetBtn">Fetch from link</button>
+    </div>
+    <div class="group">
+      <button class="btn secondary" id="resetBtn">Reset to sample data</button>
+    </div>
+    <div class="data-status" id="dataStatus">Editing the ledger stored in this browser.</div>
+  </div>
+
+  <section class="section" style="margin-top:32px;">
+    <div class="section-head">
+      <h2 class="section-title">Categories</h2>
+      <p class="section-note">Rename, re-budget, or remove a category — transactions follow along</p>
+    </div>
+    <div class="cat-manage">
+      <table class="cat-table">
+        <thead><tr><th>Category</th><th class="num">Planned budget (₹)</th><th></th></tr></thead>
+        <tbody id="catBody"></tbody>
+      </table>
+      <form id="addCatForm" class="add-row-form" style="margin-top:14px;">
+        <input type="text" name="name" placeholder="New category name" required>
+        <input type="text" name="planned" placeholder="Planned ₹" required>
+        <button type="submit">Add category</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2 class="section-title">Add an entry</h2>
+      <p class="section-note"></p>
+    </div>
+    <form id="addTxForm" class="add-row-form">
+      <input type="date" name="date" required>
+      <input type="text" name="category" list="categoryOptions" placeholder="Category" required>
+      <datalist id="categoryOptions"></datalist>
+      <input type="text" name="desc" placeholder="Description">
+      <input type="text" name="mode" placeholder="Payment mode">
+      <input type="text" name="amount" placeholder="Amount ₹" required>
+      <button type="submit">Add entry</button>
+    </form>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2 class="section-title">All entries</h2>
+      <p class="section-note" id="txCount"></p>
+    </div>
+    <div class="filters">
+      <input type="text" id="txSearch" placeholder="Search description or category…">
+      <select id="txMonthFilter"><option value="">All months</option></select>
+      <select id="txModeFilter"><option value="">All payment modes</option></select>
+    </div>
+    <div class="ledger-wrap">
+      <table class="tx-table">
+        <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Mode</th><th class="num">Amount (₹)</th><th></th></tr></thead>
+        <tbody id="txBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>Personal ledger · data stored in this browser only</footer>
+</div>
+
+<!-- Import preview modal -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Review imported entries</h3>
+      <span class="section-note" id="modalSubcount"></span>
+    </div>
+    <div class="modal-body">
+      <p class="prev-note">Check dates, amounts and guessed categories before adding these to the ledger. Uncheck any row you don't want.</p>
+      <table class="prev-table">
+        <thead><tr><th></th><th>Date</th><th>Description</th><th>Category</th><th>Amount (₹)</th></tr></thead>
+        <tbody id="previewBody"></tbody>
+      </table>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" id="modalCancel">Cancel</button>
+      <button class="btn-confirm" id="modalConfirm">Add to ledger</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/store.js"></script>
+<script src="js/parse.js"></script>
+<script src="js/ledger.js"></script>
+</body>
+</html>
