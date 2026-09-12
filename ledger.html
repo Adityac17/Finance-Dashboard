@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Transaction Ledger &amp; Categories</title>
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script>try{if(localStorage.getItem("finance_theme")==="dark")document.documentElement.setAttribute("data-theme","dark");}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
@@ -37,9 +38,12 @@
       <button class="go" id="fetchSheetBtn">Fetch from link</button>
     </div>
     <div class="group">
+      <button class="btn secondary" id="exportBtn">⬇ Export backup (.json)</button>
+      <label class="filebtn" for="importJson">⬆ Restore backup</label>
+      <input type="file" id="importJson" accept=".json,application/json">
       <button class="btn secondary" id="resetBtn">Reset to sample data</button>
     </div>
-    <div class="data-status" id="dataStatus">Editing the ledger stored in this browser.</div>
+    <div class="data-status" id="dataStatus">Editing your ledger — changes sync to your account.</div>
   </div>
 
   <section class="section" style="margin-top:32px;">
@@ -56,6 +60,45 @@
         <input type="text" name="name" placeholder="New category name" required>
         <input type="text" name="planned" placeholder="Planned ₹" required>
         <button type="submit">Add category</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2 class="section-title">Recurring transactions</h2>
+      <p class="section-note">Fixed monthly items (rent, EMIs, SIPs) post themselves each month automatically</p>
+    </div>
+    <div class="cat-manage">
+      <table class="cat-table" id="recurringTable">
+        <thead><tr><th>Day</th><th>Category</th><th>Description</th><th>Mode</th><th class="num">Amount (₹)</th><th>Active</th><th></th></tr></thead>
+        <tbody id="recurringBody"></tbody>
+      </table>
+      <form id="addRecurringForm" class="add-row-form" style="margin-top:14px;">
+        <input type="number" name="day" min="1" max="28" placeholder="Day 1–28" required style="max-width:90px;">
+        <input type="text" name="category" list="categoryOptions" placeholder="Category" required>
+        <input type="text" name="desc" placeholder="Description">
+        <input type="text" name="mode" placeholder="Mode (e.g. Auto-Debit)">
+        <input type="text" name="amount" placeholder="Amount ₹" required>
+        <button type="submit">Add recurring</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2 class="section-title">Monthly income</h2>
+      <p class="section-note">Income is entered per month — edit or add a month here</p>
+    </div>
+    <div class="cat-manage">
+      <table class="cat-table" id="incomeTable">
+        <thead><tr><th>Month</th><th class="num">Income (₹)</th><th></th></tr></thead>
+        <tbody id="incomeBody"></tbody>
+      </table>
+      <form id="addIncomeForm" class="add-row-form" style="margin-top:14px;">
+        <input type="month" name="month" required>
+        <input type="text" name="amount" placeholder="Income ₹" required>
+        <button type="submit">Set income</button>
       </form>
     </div>
   </section>
@@ -85,6 +128,9 @@
       <input type="text" id="txSearch" placeholder="Search description or category…">
       <select id="txMonthFilter"><option value="">All months</option></select>
       <select id="txModeFilter"><option value="">All payment modes</option></select>
+      <label class="range-label">From <input type="date" id="txFrom"></label>
+      <label class="range-label">To <input type="date" id="txTo"></label>
+      <button class="btn secondary" id="txClearRange" type="button">Clear dates</button>
     </div>
     <div class="ledger-wrap">
       <table class="tx-table">

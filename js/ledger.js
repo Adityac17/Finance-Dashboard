@@ -80,10 +80,14 @@ function renderTransactions(){
   const search = document.getElementById("txSearch").value.trim().toLowerCase();
   const mode = document.getElementById("txModeFilter").value;
   const monthFilter = document.getElementById("txMonthFilter").value;
+  const from = document.getElementById("txFrom").value;   // "YYYY-MM-DD" or ""
+  const to = document.getElementById("txTo").value;
   const catNames = s.categories.map(c=>c.name);
 
   const rows = s.transactions.filter(t=>{
     if(monthFilter && Store.monthKeyOf(t.date) !== monthFilter) return false;
+    if(from && t.date < from) return false;
+    if(to && t.date > to) return false;
     if(mode && t.mode !== mode) return false;
     if(search && !((t.desc||"").toLowerCase().includes(search) || (t.category||"").toLowerCase().includes(search))) return false;
     return true;
@@ -144,9 +148,14 @@ document.getElementById("addTxForm").addEventListener("submit", (e)=>{
   populateMonthFilter(); populateModes(); renderTransactions();
 });
 
-["txSearch","txModeFilter","txMonthFilter"].forEach(id=>{
+["txSearch","txModeFilter","txMonthFilter","txFrom","txTo"].forEach(id=>{
   document.getElementById(id).addEventListener("input", renderTransactions);
   document.getElementById(id).addEventListener("change", renderTransactions);
+});
+document.getElementById("txClearRange").addEventListener("click", ()=>{
+  document.getElementById("txFrom").value = "";
+  document.getElementById("txTo").value = "";
+  renderTransactions();
 });
 
 /* ================= Import preview modal ================= */
@@ -233,11 +242,132 @@ document.getElementById("resetBtn").addEventListener("click", ()=>{
   setStatus("Ledger reset to sample data.", "ok");
 });
 
+/* ================= F1 recurring transactions ================= */
+function renderRecurring(){
+  const s = Store.load();
+  const cats = s.categories.map(c=>c.name);
+  const rows = (s.recurring||[]).map(r=>`
+    <tr data-id="${r.id}">
+      <td><input type="number" class="recDay" min="1" max="28" value="${esc(r.day)}" style="max-width:70px;"></td>
+      <td><select class="recCat">${cats.map(c=>`<option ${c===r.category?'selected':''}>${esc(c)}</option>`).join("")}${cats.includes(r.category)?"":`<option selected>${esc(r.category)}</option>`}</select></td>
+      <td><input type="text" class="recDesc" value="${esc(r.desc)}"></td>
+      <td><input type="text" class="recMode" value="${esc(r.mode)}"></td>
+      <td class="num"><input type="text" class="recAmt" value="${esc(r.amount)}"></td>
+      <td style="text-align:center;"><input type="checkbox" class="recActive" ${r.active?"checked":""}></td>
+      <td class="num">
+        <button class="icon-btn save" data-action="save-rec">Save</button>
+        <button class="icon-btn" data-action="del-rec">Delete</button>
+      </td>
+    </tr>`).join("");
+  document.getElementById("recurringBody").innerHTML = rows || `<tr><td colspan="7" class="tx-empty">No recurring items yet.</td></tr>`;
+}
+document.getElementById("recurringBody").addEventListener("click",(e)=>{
+  const btn = e.target.closest("button"); if(!btn) return;
+  const tr = btn.closest("tr"); const id = Number(tr.dataset.id);
+  if(btn.dataset.action==="save-rec"){
+    Store.updateRecurring(id,{
+      day: tr.querySelector(".recDay").value,
+      category: tr.querySelector(".recCat").value,
+      desc: tr.querySelector(".recDesc").value,
+      mode: tr.querySelector(".recMode").value,
+      amount: tr.querySelector(".recAmt").value,
+      active: tr.querySelector(".recActive").checked
+    });
+    Store.materializeRecurring();
+    setStatus("Recurring item saved.","ok");
+    renderRecurring(); populateMonthFilter(); populateModes(); renderTransactions();
+  }else if(btn.dataset.action==="del-rec"){
+    if(!confirm("Delete this recurring item? Transactions it already posted stay in the ledger.")) return;
+    Store.deleteRecurring(id);
+    setStatus("Recurring item deleted.","ok");
+    renderRecurring();
+  }
+});
+document.getElementById("addRecurringForm").addEventListener("submit",(e)=>{
+  e.preventDefault(); const f = e.target;
+  Store.addRecurring({
+    day: f.day.value,
+    category: f.category.value.trim() || "Uncategorized",
+    desc: f.desc.value.trim(),
+    mode: f.mode.value.trim(),
+    amount: f.amount.value
+  });
+  f.reset();
+  setStatus("Recurring item added — posted for this month.","ok");
+  renderRecurring(); populateMonthFilter(); populateModes(); renderTransactions();
+});
+
+/* ================= F2 monthly income ================= */
+function renderIncome(){
+  const s = Store.load();
+  const keys = Object.keys(s.income).sort();
+  const rows = keys.map(k=>`
+    <tr data-month="${esc(k)}">
+      <td>${esc(Store.monthLabel(k))}</td>
+      <td class="num"><input type="text" class="incAmt" value="${esc(s.income[k])}"></td>
+      <td class="num">
+        <button class="icon-btn save" data-action="save-inc">Save</button>
+        <button class="icon-btn" data-action="del-inc">Delete</button>
+      </td>
+    </tr>`).join("");
+  document.getElementById("incomeBody").innerHTML = rows || `<tr><td colspan="3" class="tx-empty">No income entered yet.</td></tr>`;
+}
+document.getElementById("incomeBody").addEventListener("click",(e)=>{
+  const btn = e.target.closest("button"); if(!btn) return;
+  const tr = btn.closest("tr"); const month = tr.dataset.month;
+  if(btn.dataset.action==="save-inc"){
+    Store.setIncome(month, tr.querySelector(".incAmt").value);
+    setStatus(`Income for ${Store.monthLabel(month)} saved.`,"ok");
+    renderIncome(); populateMonthFilter();
+  }else if(btn.dataset.action==="del-inc"){
+    if(!confirm(`Remove income for ${Store.monthLabel(month)}?`)) return;
+    Store.deleteIncome(month);
+    setStatus("Income entry removed.","ok");
+    renderIncome(); populateMonthFilter();
+  }
+});
+document.getElementById("addIncomeForm").addEventListener("submit",(e)=>{
+  e.preventDefault(); const f = e.target;
+  const month = f.month.value; if(!month) return;
+  Store.setIncome(month, f.amount.value);
+  f.reset();
+  setStatus(`Income for ${Store.monthLabel(month)} set.`,"ok");
+  renderIncome(); populateMonthFilter();
+});
+
+/* ================= F3 backup / restore ================= */
+document.getElementById("exportBtn").addEventListener("click",()=>{
+  const blob = new Blob([Store.exportJSON()], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ledger-backup-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  setStatus("Backup downloaded.","ok");
+});
+document.getElementById("importJson").addEventListener("change", async (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  try{
+    const obj = JSON.parse(await file.text());
+    if(!confirm("Restore this backup? It replaces your current ledger everywhere it's synced.")){ e.target.value=""; return; }
+    Store.importState(obj);
+    setStatus("Backup restored.","ok");
+    populateMonthFilter(); populateModes(); renderCategories(); renderRecurring(); renderIncome(); renderTransactions();
+  }catch(err){
+    console.error(err);
+    setStatus("Restore failed: "+err.message,"err");
+  }
+  e.target.value = "";
+});
+
 /* ================= init ================= */
 /* auth.js calls this once the signed-in user's ledger is loaded. */
 window.__init = function(){
   populateMonthFilter();
   populateModes();
   renderCategories();
+  renderRecurring();
+  renderIncome();
   renderTransactions();
 };

@@ -178,3 +178,69 @@ footer{ margin-top:56px; padding-top:16px; border-top:1px solid var(--rule); fon
 }
 .user-signout:hover{ background:#fff; }
 @media(max-width:560px){ .user-name{ display:none; } }
+
+/* ================= F4 insights strip ================= */
+.insights-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:16px 0 4px; }
+.insight{ border:1px solid var(--rule); background:var(--paper-dark); padding:12px 14px; }
+.insight-label{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); margin:0 0 6px; }
+.insight-value{ font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:600; color:var(--ink); margin:0; line-height:1.1; }
+.insight-sub{ font-size:11.5px; color:var(--ink-soft); margin:5px 0 0; }
+@media(max-width:720px){ .insights-row{ grid-template-columns:repeat(2,1fr); } }
+
+/* ================= F6 reminders ================= */
+.reminders{ display:flex; flex-direction:column; gap:8px; }
+.reminder{ display:grid; grid-template-columns:110px 1fr auto auto; gap:12px; align-items:center;
+  border:1px solid var(--rule); border-left:3px solid var(--gold); background:var(--paper-dark); padding:9px 12px; font-size:13px; }
+.reminder-when{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--gold); font-weight:600; }
+.reminder-cat{ font-size:11.5px; color:var(--ink-soft); }
+.reminder-amt{ font-family:'IBM Plex Mono',monospace; font-weight:600; }
+@media(max-width:600px){ .reminder{ grid-template-columns:1fr auto; } .reminder-cat{ display:none; } }
+
+/* ================= F5 goals ================= */
+.goals{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+.goal{ border:1px solid var(--rule); background:var(--paper-dark); padding:13px 15px; }
+.goal-head{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:9px; }
+.goal-name{ font-family:'Fraunces',serif; font-weight:600; font-size:15px; }
+.goal-fig{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--ink-soft); }
+.goal-foot{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap; }
+.goal-actions{ display:flex; align-items:center; gap:6px; }
+.goal-add-input{ width:80px; font-size:12px; padding:5px 7px; border:1px solid var(--rule); background:var(--paper); color:var(--ink); }
+@media(max-width:600px){ .goals{ grid-template-columns:1fr; } }
+
+/* ================= F7 sparkline + date range ================= */
+.spark-cell{ width:100px; }
+.spark{ display:block; }
+.range-label{ font-size:12px; color:var(--ink-soft); display:inline-flex; align-items:center; gap:5px; }
+.range-label input{ font-size:12.5px; padding:6px 7px; border:1px solid var(--rule); background:var(--paper); color:var(--ink); }
+
+/* ================= F8 theme toggle ================= */
+.theme-toggle-fixed{
+  position:fixed; top:12px; right:14px; z-index:50;
+  font-family:'IBM Plex Mono',monospace; font-size:12px; padding:7px 12px;
+  border:1px solid var(--ink); background:var(--paper-dark); color:var(--ink); cursor:pointer;
+}
+.theme-toggle-fixed:hover{ background:var(--paper); }
+
+/* ================= dark theme ================= */
+:root[data-theme="dark"]{
+  --paper:#14181F;
+  --paper-dark:#1C222C;
+  --rule:#333B49;
+  --rule-blue:#33465C;
+  --ink:#E7E2D4;
+  --ink-soft:#9AA6B8;
+  --credit:#5FB98C;
+  --debit:#E0765F;
+  --gold:#D6A94B;
+  --focus:#E7E2D4;
+}
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea{ background:var(--paper); color:var(--ink); border-color:var(--rule); }
+:root[data-theme="dark"] input::placeholder{ color:var(--ink-soft); }
+:root[data-theme="dark"] .data-panel label.filebtn:hover,
+:root[data-theme="dark"] .data-panel button.go:hover,
+:root[data-theme="dark"] .data-panel button.btn:hover,
+:root[data-theme="dark"] .google-btn:hover:not(:disabled),
+:root[data-theme="dark"] .user-signout:hover,
+:root[data-theme="dark"] .theme-toggle-fixed:hover{ background:var(--paper-dark); }

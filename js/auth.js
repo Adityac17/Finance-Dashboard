@@ -13,6 +13,28 @@
 (function(){
   const page = document.body.dataset.page || "app";
 
+  function applyTheme(theme){
+    if(theme === "dark") document.documentElement.setAttribute("data-theme","dark");
+    else document.documentElement.removeAttribute("data-theme");
+  }
+  function themeLabel(theme){ return theme === "dark" ? "☀ Light" : "☾ Dark"; }
+
+  /* Login page: a standalone toggle that works pre-auth via localStorage. */
+  if(page === "login"){
+    const t = document.getElementById("themeToggle");
+    if(t){
+      let cur = "light";
+      try{ cur = localStorage.getItem("finance_theme") === "dark" ? "dark" : "light"; }catch(e){}
+      t.textContent = themeLabel(cur);
+      t.addEventListener("click", ()=>{
+        cur = cur === "dark" ? "light" : "dark";
+        applyTheme(cur);
+        try{ localStorage.setItem("finance_theme", cur); }catch(e){}
+        t.textContent = themeLabel(cur);
+      });
+    }
+  }
+
   if(typeof FIREBASE_CONFIGURED !== "undefined" && !FIREBASE_CONFIGURED){
     // Placeholders still in firebase-config.js.
     const msg = "Firebase isn't configured yet. Paste your project's web "
@@ -26,6 +48,7 @@
       console.warn(msg);
       // Fall back to local-only mode so the app still works while you set up.
       Store.load();
+      applyTheme(Store.getTheme());
       if(window.__init) window.__init();
     }
     return;
@@ -73,6 +96,11 @@
     }catch(e){
       console.warn("Falling back to local cache — Firestore load failed.", e);
     }
+    // apply the user's saved theme + refresh the toggle label
+    applyTheme(Store.getTheme());
+    try{ localStorage.setItem("finance_theme", Store.getTheme()); }catch(e){}
+    const tb = document.getElementById("themeToggle");
+    if(tb) tb.textContent = themeLabel(Store.getTheme());
     if(window.__init) window.__init();
   });
 
@@ -89,8 +117,18 @@
     const photo = user.photoURL
       ? `<img class="user-avatar" src="${user.photoURL}" alt="" referrerpolicy="no-referrer">`
       : `<span class="user-avatar user-avatar--blank">${(name[0]||"?").toUpperCase()}</span>`;
-    bar.innerHTML = `${photo}<span class="user-name"></span><button id="signOutBtn" class="user-signout">Sign out</button>`;
+    bar.innerHTML = `${photo}<span class="user-name"></span>`
+      + `<button id="themeToggle" class="user-signout" type="button"></button>`
+      + `<button id="signOutBtn" class="user-signout">Sign out</button>`;
     bar.querySelector(".user-name").textContent = name;   // textContent = XSS-safe
+    const tbtn = bar.querySelector("#themeToggle");
+    tbtn.textContent = themeLabel(Store.getTheme());
+    tbtn.addEventListener("click", ()=>{
+      const next = Store.getTheme() === "dark" ? "light" : "dark";
+      Store.setTheme(next);
+      applyTheme(next);
+      tbtn.textContent = themeLabel(next);
+    });
     bar.querySelector("#signOutBtn").addEventListener("click", ()=>{
       auth.signOut().then(()=> location.replace("login.html"));
     });

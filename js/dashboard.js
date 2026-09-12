@@ -137,6 +137,7 @@ function renderBudgetTable(){
         <div class="progress-track"><div class="progress-fill" style="width:${Math.min(usedFrac,1)*100}%;background:${color}"></div></div>
         <div class="pct-label">${pct(usedFrac)} · ${statusText}</div>
       </td>
+      <td class="spark-cell">${sparkline(Store.categorySeries(c.name).slice(-6))}</td>
     </tr>`;
   }).join("");
   const totalVar = totalP-totalA;
@@ -144,17 +145,129 @@ function renderBudgetTable(){
     <td class="cat">Total</td><td class="num">${inr(totalP)}</td><td class="num">${inr(totalA)}</td>
     <td class="num" style="color:${totalVar>=0?'#2F6E4F':'#A6402E'}">${totalVar>=0?'+':''}${inr(totalVar)}</td>
     <td class="progress-cell"><div class="pct-label">${totalP?pct(totalA/totalP):'—'} of plan used</div></td>
+    <td class="spark-cell"></td>
   </tr>`;
   document.getElementById("budgetBody").innerHTML = rows;
+}
+
+/* ================= F4 insights ================= */
+function monthDaysInfo(key){
+  const [y,m] = key.split("-").map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const now = new Date();
+  const isCurrent = key === `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const elapsed = isCurrent ? now.getDate() : daysInMonth;
+  return { daysInMonth, elapsed, isCurrent };
+}
+function renderInsights(){
+  const el = document.getElementById("insightsRow"); if(!el) return;
+  const months = Store.months();
+  const idx = months.indexOf(currentMonth);
+  const d = Store.monthTotals(currentMonth);
+  const { daysInMonth, elapsed, isCurrent } = monthDaysInfo(currentMonth);
+  const avgDaily = elapsed ? d.expenses/elapsed : 0;
+  const projected = isCurrent ? avgDaily*daysInMonth : d.expenses;
+  const prev = idx>0 ? Store.monthTotals(months[idx-1]) : null;
+  const momDelta = prev ? d.expenses-prev.expenses : null;
+  const momPct = prev && prev.expenses ? (d.expenses-prev.expenses)/prev.expenses : null;
+  const catTotals = Store.categoryTotalsForMonth(currentMonth);
+  let topCat="—", topVal=0;
+  Object.entries(catTotals).forEach(([k,v])=>{ if(v>topVal){ topVal=v; topCat=k; } });
+  const momColor = momDelta==null ? "" : (momDelta>0 ? "var(--debit)" : "var(--credit)");
+  const cards = [
+    { l:"Avg daily spend", v:inr(avgDaily), s:isCurrent?`over ${elapsed} days so far`:`over ${daysInMonth} days` },
+    { l:"Projected month-end", v:inr(projected), s:isCurrent?"at current pace":"final total" },
+    { l:"vs last month", v:(momDelta==null?"—":(momDelta>=0?"+":"")+inr(momDelta)), s:(momPct==null?"no prior month":pct(momPct)+" change"), c:momColor },
+    { l:"Top category", v:topCat, s:inr(topVal) }
+  ];
+  el.innerHTML = cards.map(c=>`<div class="insight">
+    <p class="insight-label">${esc(c.l)}</p>
+    <p class="insight-value" style="${c.c?`color:${c.c}`:''}">${esc(String(c.v))}</p>
+    <p class="insight-sub">${esc(String(c.s))}</p></div>`).join("");
+}
+
+/* ================= F6 reminders ================= */
+function renderReminders(){
+  const sec = document.getElementById("remindersSection");
+  const list = document.getElementById("remindersList");
+  if(!sec || !list) return;
+  const bills = Store.upcomingBills(7);
+  if(!bills.length){ sec.hidden = true; return; }
+  sec.hidden = false;
+  list.innerHTML = bills.map(b=>`<div class="reminder">
+    <span class="reminder-when">${b.inDays===0?"Today":b.inDays===1?"Tomorrow":"in "+b.inDays+" days"}</span>
+    <span class="reminder-desc">${esc(b.desc||b.category)}</span>
+    <span class="reminder-cat">${esc(b.category)}</span>
+    <span class="reminder-amt num">${inr(b.amount)}</span>
+  </div>`).join("");
+}
+
+/* ================= F5 goals ================= */
+function renderGoals(){
+  const list = document.getElementById("goalsList"); if(!list) return;
+  const goals = Store.load().goals || [];
+  if(!goals.length){ list.innerHTML = `<p class="section-note">No goals yet — add one below.</p>`; return; }
+  list.innerHTML = goals.map(g=>{
+    const frac = g.target ? Math.min(g.saved/g.target,1) : 0;
+    const done = g.target && g.saved>=g.target;
+    return `<div class="goal" data-id="${g.id}">
+      <div class="goal-head"><span class="goal-name">${esc(g.name)}</span>
+        <span class="goal-fig num">${inr(g.saved)} / ${inr(g.target)}</span></div>
+      <div class="progress-track"><div class="progress-fill" style="width:${frac*100}%;background:${done?'var(--credit)':'var(--gold)'}"></div></div>
+      <div class="goal-foot">
+        <span class="pct-label">${pct(frac)}${done?" · reached 🎉":""}</span>
+        <span class="goal-actions">
+          <input type="text" class="goal-add-input" placeholder="+ add ₹">
+          <button class="icon-btn save" data-action="goal-add">Add</button>
+          <button class="icon-btn" data-action="goal-del">Delete</button>
+        </span>
+      </div>
+    </div>`;
+  }).join("");
+}
+document.getElementById("goalsList").addEventListener("click",(e)=>{
+  const btn = e.target.closest("button"); if(!btn) return;
+  const card = btn.closest(".goal"); const id = Number(card.dataset.id);
+  if(btn.dataset.action==="goal-del"){
+    if(!confirm("Delete this goal?")) return;
+    Store.deleteGoal(id); renderGoals();
+  }else if(btn.dataset.action==="goal-add"){
+    const v = Number(card.querySelector(".goal-add-input").value)||0;
+    if(!v) return;
+    const g = Store.load().goals.find(x=>x.id===id); if(!g) return;
+    Store.updateGoal(id,{ saved:(g.saved||0)+v }); renderGoals();
+  }
+});
+document.getElementById("addGoalForm").addEventListener("submit",(e)=>{
+  e.preventDefault(); const f = e.target;
+  const name = f.name.value.trim(); if(!name) return;
+  Store.addGoal({ name, target:f.target.value, saved:f.saved.value });
+  f.reset(); renderGoals();
+});
+
+/* ================= F7 sparkline ================= */
+function sparkline(vals){
+  const w=90,h=24,pad=3;
+  if(!vals || !vals.length) return "";
+  const max = Math.max(1, ...vals);
+  const step = vals.length>1 ? (w-pad*2)/(vals.length-1) : 0;
+  const pts = vals.map((v,i)=>`${(pad+step*i).toFixed(1)},${(h-pad-(h-pad*2)*(v/max)).toFixed(1)}`).join(" ");
+  const last = vals[vals.length-1], prev = vals.length>1 ? vals[vals.length-2] : last;
+  const col = last>prev ? "var(--debit)" : "var(--credit)";
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.5"/></svg>`;
 }
 
 function renderAll(){
   renderTabs();
   renderKPIs();
+  renderInsights();
+  renderReminders();
   renderBarChart();
   renderDonut();
   renderLineChart();
   renderBudgetTable();
+  renderGoals();
 }
 
 /* auth.js calls this once the signed-in user's ledger is loaded. */

@@ -62,31 +62,79 @@ SIPs & Investments, EMIs, etc.) came from that real workbook, seeded into
      modal, and kept the "publish to web" CSV fetch as an alternative import
      source.
 
+4. **v3.1 — bug fixes (Sep 2026).** Two defects found reviewing the shipped
+   code: (a) `Store.load()` referenced `raw` outside the `try` block it was
+   `const`-declared in → `ReferenceError` on every load, so the app never
+   rendered; (b) stored-XSS — category names / imported descriptions / payment
+   modes were interpolated into `innerHTML` without escaping. Fixed by hoisting
+   `raw` and adding an `esc()` helper (in both `dashboard.js` and `ledger.js`)
+   applied to every user-supplied string.
+
+5. **v4 — Google login + cloud sync + eight features.** The person wanted a
+   real login and easier day-to-day management.
+   - **Auth + sync:** Google Sign-In (Firebase Auth, compat SDK) gates the
+     app; each user's ledger is a Firestore doc at `ledgers/{uid}`, protected
+     by per-user security rules (`firestore.rules`). `localStorage` is kept as
+     an offline cache, now namespaced per uid. `login.html` is the entry
+     point; `js/auth.js` handles sign-in/out, the auth-state redirect guard,
+     and the signed-in user chip. Setup steps for the Firebase project live in
+     `FIREBASE_SETUP.md`; the web config placeholder is `js/firebase-config.js`
+     (those keys are public by design — security is the rules + authorized
+     domains, not secrecy). Before config is filled in, the app degrades to
+     local-only mode with a clear message.
+   - **Load flow changed:** page scripts no longer auto-render at the bottom;
+     each exposes `window.__init()`, which `auth.js` calls once the signed-in
+     user's ledger is loaded (async). `Store.bindDb()` / `Store.bindUser()`
+     wire Firestore; `Store.save()` writes localStorage immediately and
+     debounces a Firestore write.
+   - **Eight features (F1–F8):** recurring transactions (auto-post monthly,
+     `materializeRecurring()`), monthly-income edit UI, JSON backup/restore,
+     an insights strip (avg daily spend, projected month-end, MoM delta, top
+     category), savings goals with progress bars, upcoming-bill reminders
+     (next 7 days, derived from recurring), a ledger date-range filter +
+     per-category 6-month sparklines in the budget table, and a light/dark
+     theme toggle (persisted in `settings.theme`, mirrored to a plain
+     `finance_theme` localStorage key for a no-flash early-apply script).
+
 ## Current data model (`js/store.js`)
 
 ```js
 state = {
-  nextId: number,                 // for generating transaction ids
-  categories: [{ name, planned }],// editable list, no fixed set
-  income: { "YYYY-MM": number },  // manually entered monthly income
-  transactions: [{ id, date: "YYYY-MM-DD", category, desc, mode, amount }]
+  nextId: number,                  // transaction id generator
+  categories: [{ name, planned }], // editable list, no fixed set
+  income: { "YYYY-MM": number },   // per-month income (editable on ledger page)
+  transactions: [{ id, date: "YYYY-MM-DD", category, desc, mode, amount,
+                   recurringId? }],// recurringId tags auto-posted rows
+  recurring: [{ id, day, category, desc, mode, amount, active, lastPosted }],
+  nextRecurringId: number,
+  goals: [{ id, name, target, saved }],
+  nextGoalId: number,
+  settings: { theme: "light" | "dark" }
 }
 ```
 
-Everything else (monthly totals, YTD totals, category totals per month,
-which months appear as tabs) is *derived* on the fly from this state via
-`Store.monthTotals()`, `Store.ytdTotals()`, `Store.categoryTotalsForMonth()`,
-`Store.months()` — there's no duplicated/denormalized aggregate data to keep
-in sync. Any UI change should go through `Store`'s methods, not touch
-`localStorage` directly.
+`_migrate()` backfills any of these fields missing from an older localStorage
+blob or a fresh Firestore doc, so new features don't break existing ledgers.
+
+Everything derived (monthly totals, YTD totals, per-category totals,
+per-category series for sparklines, which months are tabs, upcoming bills) is
+computed on the fly via `Store.monthTotals()`, `ytdTotals()`,
+`categoryTotalsForMonth()`, `categorySeries()`, `months()`, `upcomingBills()`
+— no denormalized aggregates to keep in sync. Any UI change should go through
+`Store`'s methods; never touch `localStorage` or Firestore directly.
 
 ## Known gaps / good next steps
 
-- **No sync across devices/browsers** — `localStorage` only. The natural next
-  step is swapping the inside of `Store.load()`/`Store.save()` for real API
-  calls (e.g. a small Supabase or Express backend) — nothing else in the app
-  needs to change if `Store`'s public method signatures stay the same.
-- **No auth** — fine for a personal deployment, not for anything shared.
+- **Auth + sync are done (v4)** via Firebase — `Store.load()`/`save()` now sit
+  in front of Firestore with a localStorage cache, exactly the swap the v3
+  notes anticipated, and public method signatures stayed stable. Remaining
+  Firebase caveat: the **first sign-in seeds fresh sample data** in Firestore;
+  there's no automatic import of a pre-existing local-only ledger (a one-time
+  "import my local data" step could be added if wanted).
+- **SVG charts are tuned for the light theme** — `dashboard.js` emits chart
+  colors as literal hex strings (grid, axis text, donut-centre label), so in
+  dark mode a few of them (notably the donut centre text) sit low-contrast.
+  Fixing properly means routing those through CSS variables / `currentColor`.
 - **PDF import is heuristic** (`js/parse.js`, `parsePDFStatement`) — a
   best-effort date+amount regex over extracted text, not a real statement
   parser. Accuracy will vary a lot by bank/wallet PDF layout.
@@ -97,10 +145,9 @@ in sync. Any UI change should go through `Store`'s methods, not touch
   tune the column-matching in `parseGenericCSV()` (`js/parse.js`) to it
   directly rather than relying on the generic header-guessing.
 - **Income is entered manually per month** (not derived from transactions,
-  since this ledger only tracks spend) — there's currently no UI control for
-  editing `state.income` on either page; only the seeded default values
-  exist. Worth adding an "edit this month's income" control on the ledger
-  page.
+  since this ledger only tracks spend). The v4 "Monthly income" section on the
+  ledger page now edits/adds/removes `state.income` entries — the v3 gap is
+  closed.
 - The visual design intentionally avoids generic dashboard/SaaS-card styling
   (see README and the original build notes) — a bank-passbook/ledger-book
   aesthetic (cream paper, navy ink, monospaced amounts, ruled lines,
