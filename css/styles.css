@@ -135,3 +135,46 @@ footer{ margin-top:56px; padding-top:16px; border-top:1px solid var(--rule); fon
 .prev-table td{ padding:6px 8px; border-bottom:1px solid var(--rule); }
 .prev-table select, .prev-table input{ font-family:'Inter',sans-serif; font-size:12px; padding:4px 6px; border:1px solid var(--rule); width:100%; }
 .prev-note{ font-size:12px; color:var(--ink-soft); margin:0 0 10px; }
+
+/* ================= auth: login page ================= */
+.login-sheet{ min-height:100vh; display:flex; align-items:center; justify-content:center; max-width:560px; }
+.login-card{
+  width:100%; border:1px solid var(--rule); background:var(--paper-dark);
+  padding:38px 34px; text-align:center;
+  box-shadow:0 1px 0 var(--rule), 0 18px 40px -28px rgba(31,46,77,.5);
+}
+.login-card .book-label{ margin-bottom:14px; }
+.login-card h1{ margin-bottom:10px; }
+.login-card .subtitle{ max-width:38ch; margin:0 auto 26px; }
+.google-btn{
+  display:inline-flex; align-items:center; gap:10px;
+  font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:500;
+  padding:11px 20px; border:1px solid var(--ink); background:var(--paper);
+  color:var(--ink); cursor:pointer;
+}
+.google-btn:hover:not(:disabled){ background:#fff; }
+.google-btn:disabled{ opacity:.5; cursor:not-allowed; }
+.google-btn .g-logo{ display:block; }
+.auth-status{ min-height:18px; margin:16px 0 0; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--ink-soft); }
+.auth-status.err{ color:var(--debit); }
+.login-fineprint{ margin:22px 0 0; font-size:11.5px; color:var(--ink-soft); max-width:44ch; margin-left:auto; margin-right:auto; }
+
+/* ================= auth: signed-in chip ================= */
+.user-bar{
+  position:fixed; top:12px; right:14px; z-index:50;
+  display:flex; align-items:center; gap:9px;
+  padding:5px 8px 5px 6px; border:1px solid var(--rule); background:var(--paper-dark);
+  font-size:12.5px;
+}
+.user-avatar{ width:26px; height:26px; border-radius:50%; object-fit:cover; display:block; }
+.user-avatar--blank{
+  display:flex; align-items:center; justify-content:center;
+  background:var(--ink); color:var(--paper); font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600;
+}
+.user-name{ font-family:'Inter',sans-serif; color:var(--ink); max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.user-signout{
+  font-family:'IBM Plex Mono',monospace; font-size:11.5px; padding:5px 9px;
+  border:1px solid var(--ink); background:var(--paper); color:var(--ink); cursor:pointer;
+}
+.user-signout:hover{ background:#fff; }
+@media(max-width:560px){ .user-name{ display:none; } }

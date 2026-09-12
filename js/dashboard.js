@@ -157,5 +157,5 @@ function renderAll(){
   renderBudgetTable();
 }
 
-Store.load();
-renderAll();
+/* auth.js calls this once the signed-in user's ledger is loaded. */
+window.__init = renderAll;

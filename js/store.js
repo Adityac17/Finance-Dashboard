@@ -83,12 +83,53 @@ function defaultState(){
 
 const Store = {
   _state: null,
+  _db: null,        // firebase.firestore() instance, set via bindDb()
+  _uid: null,       // signed-in user id, set via bindUser()
+  _saveTimer: null, // debounce handle for remote writes
+
+  /* localStorage key is namespaced per user so multiple Google accounts
+     on the same browser don't clobber each other; falls back to the base
+     key when running local-only (no user bound). */
+  _key(){ return STORAGE_KEY + (this._uid ? "_" + this._uid : ""); },
+  _persistLocal(){ try{ localStorage.setItem(this._key(), JSON.stringify(this._state)); }catch(e){} },
+
+  /* ---------- Firebase sync ---------- */
+  bindDb(db){ this._db = db; },
+  // Load this user's ledger from Firestore into _state. Falls back to the
+  // per-user localStorage cache (or seed data) if there's no remote doc yet
+  // or the network fails; in the fallback case it pushes a doc up so the
+  // account has one going forward.
+  async bindUser(uid){
+    this._uid = uid;
+    this._state = null;
+    if(this._db){
+      try{
+        const snap = await this._db.collection("ledgers").doc(uid).get();
+        if(snap.exists){ this._state = snap.data(); this._persistLocal(); return this._state; }
+      }catch(e){
+        console.warn("Firestore read failed — using local cache.", e);
+      }
+    }
+    this.load();        // hydrate _state from per-user localStorage or defaults
+    this._saveRemote(); // seed the remote doc for a first-time / offline user
+    return this._state;
+  },
+  _scheduleRemote(){
+    if(!this._db || !this._uid) return;
+    clearTimeout(this._saveTimer);
+    this._saveTimer = setTimeout(()=>this._saveRemote(), 800);
+  },
+  _saveRemote(){
+    if(!this._db || !this._uid) return;
+    this._db.collection("ledgers").doc(this._uid).set(this._state)
+      .catch(e=>console.warn("Firestore write failed (kept locally).", e));
+  },
 
   load(){
     if(this._state) return this._state;
     let raw = null;
     try{
-      raw = localStorage.getItem(STORAGE_KEY);
+      raw = localStorage.getItem(this._key());
       this._state = raw ? JSON.parse(raw) : defaultState();
     }catch(e){
       console.warn("Could not read stored ledger, starting fresh.", e);
@@ -98,7 +139,10 @@ const Store = {
     if(!raw) this.save();
     return this._state;
   },
-  save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(this._state)); },
+  save(){
+    this._persistLocal();
+    this._scheduleRemote();
+  },
   resetToDefaults(){ this._state = defaultState(); this.save(); return this._state; },
 
   /* ---------- derived helpers ---------- */

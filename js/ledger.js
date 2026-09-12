@@ -234,8 +234,10 @@ document.getElementById("resetBtn").addEventListener("click", ()=>{
 });
 
 /* ================= init ================= */
-Store.load();
-populateMonthFilter();
-populateModes();
-renderCategories();
-renderTransactions();
+/* auth.js calls this once the signed-in user's ledger is loaded. */
+window.__init = function(){
+  populateMonthFilter();
+  populateModes();
+  renderCategories();
+  renderTransactions();
+};
